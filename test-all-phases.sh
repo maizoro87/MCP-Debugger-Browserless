@@ -5,10 +5,12 @@
 
 BASE_URL="https://mcp-debugger-production.up.railway.app"
 TEST_PAGE="https://example.com"
+API_KEY="352368f9afffa3387a76561a062458d09834a26f9140f8a5e9bc88a08b571cf1"
 
 echo "=========================================="
 echo "MCP DEBUGGER COMPREHENSIVE TEST SUITE"
 echo "=========================================="
+echo "Testing with API Key Authentication"
 echo ""
 
 # Color codes
@@ -51,14 +53,14 @@ echo "=========================================="
 # Navigate to test page
 echo "Navigating to $TEST_PAGE..."
 response=$(curl -s -X POST "$BASE_URL/mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" \
   -d "{\"method\":\"navigate\",\"params\":{\"url\":\"$TEST_PAGE\"}}")
 test_endpoint "Navigate" '"success":true' "$response"
 
 # Get network requests
 echo "Fetching network requests..."
 response=$(curl -s -X POST "$BASE_URL/mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" \
   -d '{"method":"get_network_requests","params":{}}')
 test_endpoint "Get network requests" '"success":true' "$response"
 test_endpoint "Network requests captured" '"count":' "$response"
@@ -66,20 +68,20 @@ test_endpoint "Network requests captured" '"count":' "$response"
 # Get console messages
 echo "Fetching console messages..."
 response=$(curl -s -X POST "$BASE_URL/mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" \
   -d '{"method":"get_console_messages","params":{}}')
 test_endpoint "Get console messages" '"success":true' "$response"
 
 # Clear monitoring data
 echo "Clearing console messages..."
 response=$(curl -s -X POST "$BASE_URL/mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" \
   -d '{"method":"clear_console_messages","params":{}}')
 test_endpoint "Clear console messages" '"success":true' "$response"
 
 echo "Clearing network requests..."
 response=$(curl -s -X POST "$BASE_URL/mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" \
   -d '{"method":"clear_network_requests","params":{}}')
 test_endpoint "Clear network requests" '"success":true' "$response"
 echo ""
@@ -91,14 +93,14 @@ echo "=========================================="
 # Mock API response
 echo "Setting up API mock..."
 response=$(curl -s -X POST "$BASE_URL/mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" \
   -d '{"method":"mock_api_response","params":{"url":"https://api.example.com/test","mockData":{"test":"data"},"status":200}}')
 test_endpoint "Mock API response" '"success":true' "$response"
 
 # Block resources
 echo "Setting up resource blocking..."
 response=$(curl -s -X POST "$BASE_URL/mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" \
   -d '{"method":"block_resources","params":{"resourceTypes":["image","font"]}}')
 test_endpoint "Block resources" '"success":true' "$response"
 echo ""
@@ -110,28 +112,28 @@ echo "=========================================="
 # Set cookie
 echo "Setting test cookie..."
 response=$(curl -s -X POST "$BASE_URL/mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" \
   -d '{"method":"set_cookie","params":{"cookie":{"name":"test_cookie","value":"test_value","domain":"example.com","path":"/"}}}')
 test_endpoint "Set cookie" '"success":true' "$response"
 
 # Get cookies
 echo "Getting cookies..."
 response=$(curl -s -X POST "$BASE_URL/mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" \
   -d '{"method":"get_cookies","params":{}}')
 test_endpoint "Get cookies" '"success":true' "$response"
 
 # Set localStorage
 echo "Setting localStorage..."
 response=$(curl -s -X POST "$BASE_URL/mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" \
   -d '{"method":"set_local_storage","params":{"key":"test_key","value":"test_value"}}')
 test_endpoint "Set localStorage" '"success":true' "$response"
 
 # Get localStorage
 echo "Getting localStorage..."
 response=$(curl -s -X POST "$BASE_URL/mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" \
   -d '{"method":"get_local_storage","params":{"key":"test_key"}}')
 test_endpoint "Get localStorage" '"success":true' "$response"
 echo ""
@@ -142,7 +144,7 @@ echo "=========================================="
 
 echo "Running multi-step test sequence..."
 response=$(curl -s -X POST "$BASE_URL/mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" \
   -d "{
     \"method\":\"multi_step_test\",
     \"params\":{
@@ -165,7 +167,7 @@ echo "=========================================="
 
 echo "Testing Gemini 2.5 Flash screenshot analysis..."
 response=$(curl -s -X POST "$BASE_URL/mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" \
   -d "{
     \"method\":\"analyze_screenshot\",
     \"params\":{
@@ -182,7 +184,7 @@ echo "Testing analyze_image endpoint..."
 # Create a small test image (1x1 red pixel PNG in base64)
 TEST_IMAGE="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="
 response=$(curl -s -X POST "$BASE_URL/mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" \
   -d "{
     \"method\":\"analyze_image\",
     \"params\":{
@@ -200,14 +202,14 @@ echo "=========================================="
 # Screenshot with full page
 echo "Taking full-page screenshot..."
 response=$(curl -s -X POST "$BASE_URL/mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" \
   -d "{\"method\":\"screenshot\",\"params\":{\"url\":\"$TEST_PAGE\",\"fullPage\":true}}" | head -c 200)
 test_endpoint "Screenshot" '"success":true' "$response"
 
 # Get page content
 echo "Getting page content..."
 response=$(curl -s -X POST "$BASE_URL/mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" \
   -d "{\"method\":\"get_content\",\"params\":{\"url\":\"$TEST_PAGE\"}}" | head -c 200)
 test_endpoint "Get content" '"success":true' "$response"
 test_endpoint "Content has HTML" '"html":' "$response"
@@ -215,7 +217,7 @@ test_endpoint "Content has HTML" '"html":' "$response"
 # Evaluate JavaScript
 echo "Evaluating JavaScript..."
 response=$(curl -s -X POST "$BASE_URL/mcp" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json" -H "X-API-Key: $API_KEY" \
   -d "{\"method\":\"evaluate\",\"params\":{\"url\":\"$TEST_PAGE\",\"script\":\"document.title\"}}")
 test_endpoint "Evaluate script" '"success":true' "$response"
 test_endpoint "Script returned result" '"result":' "$response"
