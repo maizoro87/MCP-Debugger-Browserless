@@ -1253,7 +1253,7 @@ class PlaywrightController {
       // Dynamic import of Gemini SDK
       const { GoogleGenerativeAI } = await import('@google/generative-ai');
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
       // Convert buffer to base64
       const base64Image = imageBuffer.toString('base64');

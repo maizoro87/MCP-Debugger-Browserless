@@ -276,7 +276,7 @@ curl -X POST https://your-app.up.railway.app/mcp \
 
 **Gemini Vision Features:**
 - 💰 **40x cheaper** than GPT-4 Vision (~$0.00025/image vs $0.01/image)
-- 🎯 **Gemini 1.5 Pro** - state-of-the-art vision model
+- 🎯 **Gemini 2.5 Flash** - Latest fast, cost-efficient vision model
 - 📊 **Detailed analysis** - UI elements, text, layout, features
 - 🔧 **Custom prompts** - Ask specific questions about screenshots
 - 🖼️ **Flexible input** - Analyze new screenshots or existing images
