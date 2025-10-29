@@ -473,19 +473,42 @@ POST /mcp
 
 ## 🔐 Security
 
-⚠️ **Current Implementation:**
-- No authentication
-- No rate limiting
-- No input sanitization
-- No CORS configuration
+✅ **Current Implementation:**
+- **API Key Authentication** - Protect MCP endpoint with `MCP_API_KEY` environment variable
+  - Set `MCP_API_KEY` on Railway to enable authentication
+  - Pass key via `X-API-Key` header or `Authorization: Bearer <key>`
+  - Health endpoint remains public (for Railway health checks)
+  - If not set, API is open (logs warning)
+- HTTPS enforced by Railway
 
-🛡️ **Production Recommendations:**
-1. Add API key middleware
-2. Implement rate limiting (express-rate-limit)
-3. Validate and sanitize all inputs
-4. Configure CORS appropriately
-5. Use HTTPS only
-6. Deploy behind a secure gateway
+⚠️ **Still Missing:**
+- Rate limiting
+- Input sanitization
+- CORS configuration
+
+🛡️ **Using Authentication:**
+
+Set environment variable on Railway:
+```bash
+MCP_API_KEY=your-secret-key-here
+```
+
+Use in requests:
+```bash
+# Option 1: X-API-Key header
+curl -X POST https://your-app.up.railway.app/mcp \
+  -H "X-API-Key: your-secret-key-here" \
+  -H "Content-Type: application/json" \
+  -d '{"method":"screenshot","params":{"url":"https://example.com"}}'
+
+# Option 2: Authorization Bearer token
+curl -X POST https://your-app.up.railway.app/mcp \
+  -H "Authorization: Bearer your-secret-key-here" \
+  -H "Content-Type: application/json" \
+  -d '{"method":"screenshot","params":{"url":"https://example.com"}}'
+```
+
+**Note:** Generate a strong API key (e.g., using `openssl rand -hex 32`)
 
 ---
 

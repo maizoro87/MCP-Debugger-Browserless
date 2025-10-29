@@ -17,6 +17,36 @@ import { playwrightController } from './src/controllers/playwright.js';
 const app = express();
 app.use(express.json());
 
+// API Key Authentication Middleware
+const API_KEY = process.env.MCP_API_KEY;
+
+function requireApiKey(req: express.Request, res: express.Response, next: express.NextFunction) {
+  // Check if API key is configured
+  if (!API_KEY) {
+    console.warn('⚠️  MCP_API_KEY not set - API is open to public!');
+    return next(); // Allow if not configured (for initial setup)
+  }
+
+  // Get API key from header
+  const providedKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
+
+  if (!providedKey) {
+    return res.status(401).json({
+      success: false,
+      error: 'API key required. Provide via X-API-Key header or Authorization: Bearer <key>'
+    });
+  }
+
+  if (providedKey !== API_KEY) {
+    return res.status(403).json({
+      success: false,
+      error: 'Invalid API key'
+    });
+  }
+
+  next();
+}
+
 // Initialize browser on startup
 async function initBrowser() {
   // Use the enhanced controller
@@ -26,13 +56,18 @@ async function initBrowser() {
   return playwrightController;
 }
 
-// Health check
+// Health check (public - no auth required for Railway health checks)
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'playwright-mcp', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    service: 'playwright-mcp',
+    authenticated: !!API_KEY,
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Navigate endpoint
-app.post('/mcp', async (req, res) => {
+// Main MCP endpoint (protected by API key)
+app.post('/mcp', requireApiKey, async (req, res) => {
   try {
     const { method, params } = req.body;
     await initBrowser();
