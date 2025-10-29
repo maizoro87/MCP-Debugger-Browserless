@@ -1,0 +1,110 @@
+=================================================================
+RAILWAY DEPLOYMENT - QUICK START GUIDE
+=================================================================
+
+Your MCP server is ready to deploy! Here's what to do:
+
+OPTION 1: CREATE NEW RAILWAY PROJECT (RECOMMENDED)
+---------------------------------------------------
+
+1. Go to: https://railway.app/dashboard
+
+2. Create GitHub Repo for MCP server:
+   - Download: /home/runner/workspace/playwright-mcp-deploy.tar.gz
+   - Extract on your machine
+   - Create repo: https://github.com/new
+   - Name: playwright-mcp-http
+   - Push the extracted code
+
+3. Deploy on Railway:
+   - Click "New Project"
+   - Select "Deploy from GitHub repo"  
+   - Choose "playwright-mcp-http"
+   - Railway auto-detects Dockerfile
+   - Build completes in ~2-3 minutes
+   - Click "Generate Domain" for public URL
+
+4. Test your deployment:
+   curl https://YOUR-URL.railway.app/health
+
+   Should return:
+   {"status":"ok","service":"playwright-mcp","timestamp":"..."}
+
+
+OPTION 2: REPLACE EXISTING DEPLOYMENT
+--------------------------------------
+
+If you have access to the old Railway project:
+
+1. Go to: https://railway.app/project/YOUR_PROJECT_ID
+
+2. Settings → Delete Service (delete old one)
+
+3. Create New Service:
+   - Same project
+   - Deploy from GitHub (use new repo from Option 1)
+   - Railway generates new URL
+
+4. Update Innovation Hub code with new URL
+
+
+WHAT'S INCLUDED
+---------------
+
+✅ Optimized Dockerfile (Playwright base image)
+✅ HTTP Server (GET /health, POST /mcp)
+✅ Fast builds (~2-3 min vs 10+ min timeout)
+✅ Pre-installed Chromium (no manual install)
+✅ Production-ready
+
+API Endpoints:
+- GET  /health               → Health check
+- POST /mcp (navigate)       → Navigate to URL
+- POST /mcp (multi_step_test) → Run automation
+
+Test with:
+curl -X POST https://YOUR-URL/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"method":"navigate","params":{"url":"https://example.com"}}'
+
+
+TROUBLESHOOTING
+---------------
+
+Build fails?
+→ Ensure Dockerfile is in root of playmcp/
+→ Check Railway build logs
+→ Base image should be: mcr.microsoft.com/playwright:v1.55.0-jammy
+
+Can't connect?
+→ Check Railway deployment status
+→ Ensure domain is generated
+→ Try /health endpoint first
+
+Still having issues?
+→ Check full guide: playmcp/RAILWAY_DEPLOYMENT.md
+
+
+YOUR FILES
+----------
+
+All files ready in: /home/runner/workspace/playmcp/
+- Dockerfile (optimized)
+- http-server.ts (HTTP wrapper)
+- package.json (updated deps)
+- RAILWAY_DEPLOYMENT.md (detailed guide)
+
+
+NEXT STEPS AFTER DEPLOYMENT
+----------------------------
+
+1. Test /health endpoint
+2. Test /mcp navigate
+3. Update Innovation Hub with new URL
+4. Run edit mode automation tests
+5. Delete old puppeteer-js-production deployment
+
+
+Need help? See: playmcp/RAILWAY_DEPLOYMENT.md
+
+=================================================================
