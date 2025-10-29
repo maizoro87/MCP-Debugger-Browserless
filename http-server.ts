@@ -406,6 +406,78 @@ app.post('/mcp', async (req, res) => {
         break;
       }
 
+      // NEW: Gemini Vision Analysis
+      case 'analyze_screenshot': {
+        const controller = await initBrowser();
+
+        // API key from params or environment variable
+        const apiKey = params.apiKey || process.env.GEMINI_API_KEY;
+
+        if (!apiKey) {
+          res.status(400).json({
+            success: false,
+            error: 'Gemini API key required (provide in params.apiKey or GEMINI_API_KEY env var)'
+          });
+          break;
+        }
+
+        const result = await controller.analyzeScreenshot(
+          params.url,
+          params.prompt,
+          apiKey,
+          {
+            fullPage: params.fullPage !== false,
+            type: params.screenshotType || 'png'
+          }
+        );
+
+        res.json({
+          success: true,
+          ...result,
+          timestamp: new Date().toISOString()
+        });
+        break;
+      }
+
+      case 'analyze_image': {
+        const controller = await initBrowser();
+
+        // API key from params or environment variable
+        const apiKey = params.apiKey || process.env.GEMINI_API_KEY;
+
+        if (!apiKey) {
+          res.status(400).json({
+            success: false,
+            error: 'Gemini API key required (provide in params.apiKey or GEMINI_API_KEY env var)'
+          });
+          break;
+        }
+
+        if (!params.imageBase64) {
+          res.status(400).json({
+            success: false,
+            error: 'imageBase64 parameter required'
+          });
+          break;
+        }
+
+        // Convert base64 to buffer
+        const imageBuffer = Buffer.from(params.imageBase64, 'base64');
+
+        const analysis = await controller.analyzeImageWithGemini(
+          imageBuffer,
+          params.prompt,
+          apiKey
+        );
+
+        res.json({
+          success: true,
+          analysis,
+          timestamp: new Date().toISOString()
+        });
+        break;
+      }
+
       default:
         res.status(400).json({
           success: false,

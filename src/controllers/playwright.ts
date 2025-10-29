@@ -1229,6 +1229,120 @@ class PlaywrightController {
     return this.state.page;
   }
 
+  // ===========================================
+  // PHASE 5: GEMINI VISION ANALYSIS
+  // ===========================================
+
+  /**
+   * Analyze screenshot with Gemini Vision
+   * @param imageBuffer - Screenshot buffer (PNG or JPEG)
+   * @param prompt - Analysis prompt (optional, defaults to general description)
+   * @param apiKey - Gemini API key (required)
+   */
+  async analyzeImageWithGemini(imageBuffer: Buffer, prompt?: string, apiKey?: string): Promise<string> {
+    try {
+      if (!apiKey) {
+        throw new Error('Gemini API key is required');
+      }
+
+      this.log('Analyzing image with Gemini Vision', {
+        promptLength: prompt?.length || 0,
+        imageSize: imageBuffer.length
+      });
+
+      // Dynamic import of Gemini SDK
+      const { GoogleGenerativeAI } = await import('@google/generative-ai');
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+
+      // Convert buffer to base64
+      const base64Image = imageBuffer.toString('base64');
+
+      // Determine image MIME type from buffer
+      let mimeType = 'image/png';
+      if (imageBuffer[0] === 0xFF && imageBuffer[1] === 0xD8) {
+        mimeType = 'image/jpeg';
+      }
+
+      // Default prompt if not provided
+      const analysisPrompt = prompt ||
+        'Describe this screenshot in detail. Include any visible text, UI elements, layout, and notable features.';
+
+      // Generate content with vision
+      const result = await model.generateContent([
+        analysisPrompt,
+        {
+          inlineData: {
+            data: base64Image,
+            mimeType
+          }
+        }
+      ]);
+
+      const response = await result.response;
+      const text = response.text();
+
+      this.log('Gemini Vision analysis complete', { responseLength: text.length });
+      return text;
+
+    } catch (error: any) {
+      console.error('Gemini Vision error:', error);
+      throw new BrowserError('Failed to analyze image with Gemini Vision', error.message);
+    }
+  }
+
+  /**
+   * Take screenshot and analyze with Gemini Vision
+   * @param url - URL to screenshot (optional, uses current page if not provided)
+   * @param prompt - Analysis prompt
+   * @param apiKey - Gemini API key
+   * @param screenshotOptions - Screenshot options (fullPage, type)
+   */
+  async analyzeScreenshot(
+    url?: string,
+    prompt?: string,
+    apiKey?: string,
+    screenshotOptions?: { fullPage?: boolean; type?: 'png' | 'jpeg' }
+  ): Promise<{ analysis: string; screenshot: string; url: string; title: string }> {
+    try {
+      if (!this.isInitialized() || !this.state.page) {
+        throw new Error('Browser not initialized');
+      }
+
+      if (!apiKey) {
+        throw new Error('Gemini API key is required');
+      }
+
+      this.log('Taking screenshot for Gemini analysis', { url, prompt: prompt?.substring(0, 50) });
+
+      // Navigate if URL provided
+      if (url) {
+        await this.navigate(url);
+      }
+
+      // Take screenshot
+      const screenshot = await this.screenshotBuffer(screenshotOptions);
+
+      // Get page metadata
+      const pageUrl = await this.getPageUrl();
+      const title = await this.getPageTitle();
+
+      // Analyze with Gemini
+      const analysis = await this.analyzeImageWithGemini(screenshot, prompt, apiKey);
+
+      return {
+        analysis,
+        screenshot: screenshot.toString('base64'),
+        url: pageUrl,
+        title
+      };
+
+    } catch (error: any) {
+      console.error('Screenshot analysis error:', error);
+      throw new BrowserError('Failed to analyze screenshot', error.message);
+    }
+  }
+
   isInitialized(): boolean {
     return !!(this.state.browser?.isConnected() && this.state.context && this.state.page);
   }

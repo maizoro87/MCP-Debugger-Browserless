@@ -242,7 +242,48 @@ curl -X POST https://your-app.up.railway.app/mcp \
 ```
 </details>
 
-**Total: 19 HTTP endpoints** (vs 38 stdio tools in original PlayMCP)
+<details>
+<summary><b>Gemini Vision Analysis (2 methods) ⭐ NEW!</b></summary>
+
+```javascript
+// Analyze screenshot (navigate + screenshot + analyze)
+{"method": "analyze_screenshot", "params": {
+  "url": "https://example.com",       // Required: URL to screenshot
+  "prompt": "What UI elements are visible?",  // Optional: analysis prompt
+  "apiKey": "your-gemini-api-key",    // Required: or set GEMINI_API_KEY env var
+  "fullPage": true,                   // Optional: full page screenshot
+  "screenshotType": "png"             // Optional: png|jpeg
+}}
+// Returns: {
+//   "success": true,
+//   "analysis": "The page shows...",
+//   "screenshot": "base64...",
+//   "url": "https://example.com",
+//   "title": "Page Title"
+// }
+
+// Analyze existing image
+{"method": "analyze_image", "params": {
+  "imageBase64": "iVBORw0KGgoAAAA...",  // Required: base64 image
+  "prompt": "Describe this image",     // Optional: analysis prompt
+  "apiKey": "your-gemini-api-key"      // Required: or set GEMINI_API_KEY env var
+}}
+// Returns: {
+//   "success": true,
+//   "analysis": "The image shows..."
+// }
+```
+
+**Gemini Vision Features:**
+- 💰 **40x cheaper** than GPT-4 Vision (~$0.00025/image vs $0.01/image)
+- 🎯 **Gemini 1.5 Pro** - state-of-the-art vision model
+- 📊 **Detailed analysis** - UI elements, text, layout, features
+- 🔧 **Custom prompts** - Ask specific questions about screenshots
+- 🖼️ **Flexible input** - Analyze new screenshots or existing images
+
+</details>
+
+**Total: 21 HTTP endpoints** (19 automation + 2 AI vision)
 
 ---
 
@@ -258,7 +299,8 @@ playmcp/
 │   │       ├── Phase 1: Console & Network Monitoring
 │   │       ├── Phase 2: Network Interception
 │   │       ├── Phase 3: Cookie & Storage
-│   │       └── Phase 4: HTTP Support Methods
+│   │       ├── Phase 4: HTTP Support Methods
+│   │       └── Phase 5: Gemini Vision Analysis ⭐
 │   └── types/
 │       └── index.ts              # TypeScript definitions
 ├── http-server.ts                # Express HTTP server
@@ -513,22 +555,23 @@ curl -X POST http://localhost:3000/mcp \
 
 ## 🚧 Roadmap
 
-### ✅ Completed (Phases 1-4)
+### ✅ Completed (Phases 1-5)
 - Console & network monitoring
 - Network interception & mocking
 - Cookie & storage management
 - HTTP server support methods
+- **Gemini Vision Analysis** ⭐ - AI-powered screenshot analysis
 - Railway deployment config
 - TypeScript compilation
 - Production build
 
-### ⏳ Coming Next (Phase 5+)
-- **AI Vision Analysis** - GPT-4 Vision screenshot analysis
+### ⏳ Coming Next (Phase 6+)
 - **Device Emulation** - Mobile, tablet, desktop testing
 - **Performance Metrics** - Load times, resource analysis
 - **Video Recording** - Capture test execution
 - **Multi-Page Support** - Popups, new windows
 - **Authentication Scenarios** - OAuth, SSO testing
+- **Advanced AI Features** - Multi-image analysis, OCR, form detection
 
 ---
 
