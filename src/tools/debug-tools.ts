@@ -264,11 +264,11 @@ export async function executeDebugInspect(sessionId: string, args: any): Promise
     const result: any = {};
 
     if (focus === 'all' || focus === 'forms') {
-      result.forms = Array.from(root.querySelectorAll('form')).map((form: Element, i) => ({
+      result.forms = Array.from(root.querySelectorAll('form') as NodeListOf<HTMLFormElement>).map((form, i) => ({
         index: i,
-        action: (form as HTMLFormElement).action || '(none)',
-        method: (form as HTMLFormElement).method || 'get',
-        fields: Array.from(form.querySelectorAll('input, select, textarea')).map((field: Element) => ({
+        action: form.action || '(none)',
+        method: form.method || 'get',
+        fields: Array.from(form.querySelectorAll('input, select, textarea') as NodeListOf<Element>).map((field) => ({
           name: field.getAttribute('name') || '(unnamed)',
           type: field.getAttribute('type') || field.tagName.toLowerCase(),
           id: field.id || null,
@@ -278,8 +278,8 @@ export async function executeDebugInspect(sessionId: string, args: any): Promise
     }
 
     if (focus === 'all' || focus === 'buttons') {
-      result.buttons = Array.from(root.querySelectorAll('button, input[type="submit"], input[type="button"]'))
-        .map((btn: Element, i) => ({
+      result.buttons = Array.from(root.querySelectorAll('button, input[type="submit"], input[type="button"]') as NodeListOf<HTMLElement>)
+        .map((btn, i) => ({
           index: i,
           text: btn.textContent?.trim() || (btn as HTMLInputElement).value || '(no text)',
           type: btn.getAttribute('type') || 'button',
@@ -289,24 +289,24 @@ export async function executeDebugInspect(sessionId: string, args: any): Promise
     }
 
     if (focus === 'all' || focus === 'links') {
-      result.links = Array.from(root.querySelectorAll('a[href]'))
+      result.links = Array.from(root.querySelectorAll('a[href]') as NodeListOf<HTMLAnchorElement>)
         .slice(0, 20) // Limit to 20 to avoid token explosion
-        .map((link: Element, i) => ({
+        .map((link, i) => ({
           index: i,
           text: link.textContent?.trim() || '(no text)',
-          href: (link as HTMLAnchorElement).href
+          href: link.href
         }));
     }
 
     if (focus === 'all' || focus === 'inputs') {
-      result.inputs = Array.from(root.querySelectorAll('input, textarea, select'))
-        .map((input: Element, i) => ({
+      result.inputs = Array.from(root.querySelectorAll('input, textarea, select') as NodeListOf<HTMLInputElement>)
+        .map((input, i) => ({
           index: i,
           type: input.getAttribute('type') || input.tagName.toLowerCase(),
           name: input.getAttribute('name') || '(unnamed)',
           id: input.id || null,
           placeholder: input.getAttribute('placeholder') || null,
-          value: (input as HTMLInputElement).value || null
+          value: input.value || null
         }));
     }
 
