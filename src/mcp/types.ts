@@ -4,7 +4,7 @@ export interface Tool {
     inputSchema: {
         type: string;
         properties: Record<string, any>;
-        required: string[];
+        required?: string[];
     };
 }
 
@@ -36,4 +36,33 @@ export interface ToolResponse {
 
 export interface ListToolsResponse {
     tools: Tool[];
+}
+
+// MCP Protocol Message Types
+export interface MCPMessage {
+    jsonrpc: '2.0';
+    method?: string;
+    id?: string | number;
+}
+
+export interface MCPRequest extends MCPMessage {
+    id: string | number;
+    method: string;
+    params?: any;
+}
+
+export interface MCPResponse {
+    jsonrpc: '2.0';
+    id: string | number | null;
+    result?: any;
+    error?: {
+        code: number;
+        message: string;
+        data?: any;
+    };
+}
+
+export interface MCPNotification extends MCPMessage {
+    method: string;
+    params?: any;
 }
