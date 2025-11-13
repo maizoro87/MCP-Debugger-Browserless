@@ -1,12 +1,13 @@
 {
   "name": "playwright-mcp-http",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "HTTP wrapper for Playwright browser automation - Railway deployable",
-  "main": "dist/http-server.js",
+  "main": "dist/http-server-v3.js",
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/http-server.js"
+    "start": "node dist/http-server-v3.js",
+    "start:legacy": "node dist/http-server.js"
   },
   "engines": {
     "node": ">=18.0.0"
