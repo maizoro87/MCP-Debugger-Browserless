@@ -264,11 +264,11 @@ export async function executeDebugInspect(sessionId: string, args: any): Promise
     const result: any = {};
 
     if (focus === 'all' || focus === 'forms') {
-      result.forms = Array.from(root.querySelectorAll('form')).map((form, i) => ({
+      result.forms = Array.from(root.querySelectorAll('form')).map((form: Element, i) => ({
         index: i,
         action: (form as HTMLFormElement).action || '(none)',
         method: (form as HTMLFormElement).method || 'get',
-        fields: Array.from(form.querySelectorAll('input, select, textarea')).map(field => ({
+        fields: Array.from(form.querySelectorAll('input, select, textarea')).map((field: Element) => ({
           name: field.getAttribute('name') || '(unnamed)',
           type: field.getAttribute('type') || field.tagName.toLowerCase(),
           id: field.id || null,
@@ -279,7 +279,7 @@ export async function executeDebugInspect(sessionId: string, args: any): Promise
 
     if (focus === 'all' || focus === 'buttons') {
       result.buttons = Array.from(root.querySelectorAll('button, input[type="submit"], input[type="button"]'))
-        .map((btn, i) => ({
+        .map((btn: Element, i) => ({
           index: i,
           text: btn.textContent?.trim() || (btn as HTMLInputElement).value || '(no text)',
           type: btn.getAttribute('type') || 'button',
@@ -291,7 +291,7 @@ export async function executeDebugInspect(sessionId: string, args: any): Promise
     if (focus === 'all' || focus === 'links') {
       result.links = Array.from(root.querySelectorAll('a[href]'))
         .slice(0, 20) // Limit to 20 to avoid token explosion
-        .map((link, i) => ({
+        .map((link: Element, i) => ({
           index: i,
           text: link.textContent?.trim() || '(no text)',
           href: (link as HTMLAnchorElement).href
@@ -300,7 +300,7 @@ export async function executeDebugInspect(sessionId: string, args: any): Promise
 
     if (focus === 'all' || focus === 'inputs') {
       result.inputs = Array.from(root.querySelectorAll('input, textarea, select'))
-        .map((input, i) => ({
+        .map((input: Element, i) => ({
           index: i,
           type: input.getAttribute('type') || input.tagName.toLowerCase(),
           name: input.getAttribute('name') || '(unnamed)',
