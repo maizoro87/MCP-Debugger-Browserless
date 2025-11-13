@@ -29,5 +29,5 @@ ENV NODE_ENV=production
 # Expose port (Railway will set PORT env var)
 EXPOSE ${PORT:-3000}
 
-# Start the HTTP server
-CMD ["node", "dist/http-server.js"]
+# Start the HTTP server (v3.0 MCP SSE server)
+CMD ["node", "dist/http-server-v3.js"]

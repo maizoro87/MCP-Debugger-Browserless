@@ -16,7 +16,8 @@
   },
   "include": [
     "src/**/*",
-    "http-server.ts"
+    "http-server.ts",
+    "http-server-v3.ts"
   ],
   "exclude": [
     "node_modules",
