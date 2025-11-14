@@ -92,18 +92,34 @@ export class SessionManager {
 
     // Initialize browser for this session
     try {
-      session.browser = await chromium.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      });
+      // Check if using Browserless or local browser
+      const browserlessToken = process.env.BROWSERLESS_TOKEN;
+      const browserlessUrl = process.env.BROWSERLESS_URL || 'wss://chrome.browserless.io';
+
+      if (browserlessToken) {
+        // Connect to Browserless (recommended)
+        console.log(`🌐 Connecting to Browserless for session ${sessionId}`);
+        const wsEndpoint = `${browserlessUrl}?token=${browserlessToken}&trackingId=${sessionId}`;
+
+        session.browser = await chromium.connect(wsEndpoint);
+        console.log(`✅ Connected to Browserless`);
+      } else {
+        // Fallback to local browser (legacy)
+        console.log(`⚠️  BROWSERLESS_TOKEN not set - using local browser (slower, no session replays)`);
+        session.browser = await chromium.launch({
+          headless: true,
+          args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+      }
 
       // Configure context with optional video recording
       const contextOptions: any = {
         viewport: { width: 1280, height: 720 },
-        userAgent: 'MCP-Debugger/3.0 (Playwright)'
+        userAgent: 'MCP-Debugger/3.0 (Playwright + Browserless)'
       };
 
-      if (enableVideo) {
+      // Note: Video recording only works with local browser, Browserless has its own replay system
+      if (enableVideo && !browserlessToken) {
         contextOptions.recordVideo = {
           dir: videoDir,
           size: { width: 1280, height: 720 }

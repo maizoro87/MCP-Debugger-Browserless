@@ -17,6 +17,10 @@ import { mcpSSEServer } from './src/mcp/sse-server.js';
 import { allDebugTools, executeDebugTool } from './src/tools/debug-tools.js';
 import { sessionManager } from './src/session/manager.js';
 import { playwrightController } from './src/controllers/playwright.js';
+import { initializeFirebase } from './src/utils/firebase-storage.js';
+
+// Initialize Firebase Storage (for screenshot uploads)
+initializeFirebase();
 
 const app = express();
 app.use(express.json());

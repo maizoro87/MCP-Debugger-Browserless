@@ -7,6 +7,7 @@
 
 import { Tool } from '../mcp/types.js';
 import { sessionManager } from '../session/manager.js';
+import { uploadScreenshot, isFirebaseAvailable } from '../utils/firebase-storage.js';
 import type { Page } from 'playwright';
 
 /**
@@ -717,15 +718,35 @@ export async function executeDebugScreenshot(sessionId: string, args: any): Prom
     screenshot = await page.screenshot({ fullPage, type: 'png' });
   }
 
-  // Return as base64 so Claude can see it
-  const response = {
+  const response: any = {
     success: true,
     url: page.url(),
     title: await page.title(),
-    screenshot: `data:image/png;base64,${screenshot.toString('base64')}`,
-    description: description || 'Current page screenshot',
-    note: 'Claude can see this screenshot directly and analyze what\'s happening visually'
+    description: description || 'Current page screenshot'
   };
+
+  // Try to upload to Firebase Storage first (prevents Claude crashes)
+  if (isFirebaseAvailable()) {
+    const firebaseUrl = await uploadScreenshot(screenshot, sessionId, description || 'screenshot');
+
+    if (firebaseUrl) {
+      // Return URL reference (optimal - small response)
+      response.screenshot_url = firebaseUrl;
+      response.note = 'Screenshot uploaded to Firebase Storage. Claude can fetch and analyze it.';
+      response.method = 'firebase_url';
+    } else {
+      // Firebase upload failed, fall back to base64
+      response.screenshot = `data:image/png;base64,${screenshot.toString('base64')}`;
+      response.note = 'Firebase upload failed - using base64 (may hit size limits)';
+      response.method = 'base64_fallback';
+    }
+  } else {
+    // Firebase not configured, use base64
+    response.screenshot = `data:image/png;base64,${screenshot.toString('base64')}`;
+    response.note = 'Firebase not configured - using base64. Set FIREBASE_SERVICE_ACCOUNT to prevent Claude crashes!';
+    response.method = 'base64_only';
+    response.warning = 'Large screenshots may crash Claude. Configure Firebase Storage to fix this.';
+  }
 
   return JSON.stringify(response, null, 2);
 }
