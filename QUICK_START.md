@@ -11,7 +11,7 @@
 
 ---
 
-## 🛠️ 3 Essential Tools (Start Here!)
+## 🛠️ 4 Essential Tools (Start Here!)
 
 ### 1. **debug_navigate** - Go to a page
 ```json
@@ -24,7 +24,18 @@
 ```
 Returns: Page title, element counts, console errors (NOT full HTML - saves tokens!)
 
-### 2. **debug_test_flow** - Complete workflows (MOST IMPORTANT!)
+### 2. **debug_screenshot** - SEE what the browser looks like! 🎯
+```json
+{
+  "name": "debug_screenshot",
+  "arguments": {
+    "description": "Check if login form is visible"
+  }
+}
+```
+**NEW!** Returns screenshot as base64 that Claude can SEE and analyze directly. Use this to verify your actions!
+
+### 3. **debug_test_flow** - Complete workflows (MOST IMPORTANT!)
 ```json
 {
   "name": "debug_test_flow",
@@ -42,7 +53,7 @@ Returns: Page title, element counts, console errors (NOT full HTML - saves token
 ```
 **Why it's critical:** Session persists across all steps - login once, test everything!
 
-### 3. **debug_verify** - Check if something worked
+### 4. **debug_verify** - Check if something worked
 ```json
 {
   "name": "debug_verify",
@@ -57,18 +68,19 @@ Returns: Page title, element counts, console errors (NOT full HTML - saves token
 
 ---
 
-## 📋 All 8 Tools
+## 📋 All 9 Tools
 
 | Tool | Use When | Token Cost |
 |------|----------|------------|
 | `debug_navigate` | Starting debugging | Low |
+| `debug_screenshot` | **Verify visual state (USE THIS!)** | Low |
 | `debug_interact` | Clicking/typing single elements | Low |
 | `debug_inspect` | Understanding page structure | Low |
 | `debug_test_flow` | **Testing complete flows** | Low (1 call vs 10!) |
 | `debug_verify` | Checking conditions | Very Low |
 | `debug_console_errors` | Checking for errors | Very Low |
 | `debug_network_analyze` | Debugging API issues | Low |
-| `debug_analyze_visual` | Visual bugs (LAST RESORT!) | High |
+| `debug_analyze_visual` | Complex visual analysis | High (try screenshot first!) |
 
 ---
 

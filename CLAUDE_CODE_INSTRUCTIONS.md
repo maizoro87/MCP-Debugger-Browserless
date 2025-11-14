@@ -43,7 +43,7 @@ Status: Maintained for backward compatibility
 
 ## 🛠️ Available Tools
 
-You have access to **8 debugging tools**, optimized for efficiency:
+You have access to **9 debugging tools**, optimized for efficiency:
 
 ### 1. **debug_navigate** - Smart Navigation
 Navigate to a URL and get a page summary (NOT full HTML - saves tokens!)
@@ -276,10 +276,52 @@ Check page state without taking screenshots (element visibility, text, URLs).
 
 ---
 
-### 6. **debug_analyze_visual** - AI Vision Analysis
+### 6. **debug_screenshot** - Visual Verification
+Capture screenshot of current page and return it directly to Claude for visual inspection.
+
+**When to use:** Verify visual state, check if elements are visible, inspect layout - BEFORE using Gemini Vision
+
+**Why this is powerful:** Claude (you!) can SEE the screenshot directly and analyze what's happening visually without needing external AI services. Use this to verify your actions succeeded!
+
+**Parameters:**
+- `fullPage` (optional): Capture full page (default: false, viewport only)
+- `selector` (optional): Capture only this element instead of full page
+- `description` (optional): What you want to check in the screenshot
+
+**Returns:** Screenshot as base64 data URL that Claude can see and analyze
+
+**Example:**
+```json
+{
+  "name": "debug_screenshot",
+  "arguments": {
+    "description": "Check if the login form is visible after navigation"
+  }
+}
+```
+
+**Response format:**
+```json
+{
+  "success": true,
+  "url": "https://...",
+  "title": "Login Page",
+  "screenshot": "data:image/png;base64,iVBORw0KGgo...",
+  "description": "Check if the login form is visible after navigation",
+  "note": "Claude can see this screenshot directly and analyze what's happening visually"
+}
+```
+
+**Pro tip:** Use this to verify your actions! After clicking a button or navigating, take a screenshot to SEE if it worked. You can self-correct based on what you see.
+
+---
+
+### 7. **debug_analyze_visual** - Gemini Vision Analysis
 Take screenshot and analyze with Gemini Vision AI.
 
-**When to use:** Visual bugs, layout issues, UI problems (use SPARINGLY - token intensive!)
+**When to use:** Complex visual analysis that requires detailed interpretation (use SPARINGLY - token intensive!)
+
+**Note:** Try `debug_screenshot` FIRST - you can analyze screenshots yourself! Only use Gemini Vision when you need a second opinion or very detailed analysis.
 
 **Important:** Only use when text-based inspection isn't enough. Most debugging can be done without screenshots.
 
@@ -302,7 +344,7 @@ Take screenshot and analyze with Gemini Vision AI.
 
 ---
 
-### 7. **debug_console_errors** - Error Monitoring
+### 8. **debug_console_errors** - Error Monitoring
 Get console errors from the page (errors only, not all logs).
 
 **When to use:** Checking for JavaScript errors, debugging issues
@@ -326,7 +368,7 @@ Get console errors from the page (errors only, not all logs).
 
 ---
 
-### 8. **debug_network_analyze** - Network Inspection
+### 9. **debug_network_analyze** - Network Inspection
 Analyze network requests (failed requests, slow requests, API calls).
 
 **When to use:** Debugging API issues, checking network failures
@@ -392,33 +434,38 @@ Single call to debug_test_flow with all steps:
 
 **Why this works:** All steps share the same browser context, so cookies/session persist!
 
-### Workflow 4: Visual Regression
+### Workflow 4: Visual Verification
 **Goal:** Check if UI looks correct
 
 ```
 1. debug_navigate → Load page
-2. debug_inspect → Check elements exist
-3. debug_verify → Verify visible elements
-4. debug_analyze_visual → ONLY if visual check needed
+2. debug_screenshot → SEE what the page looks like
+3. debug_inspect → Check elements exist (if needed)
+4. debug_verify → Verify visible elements
+5. debug_analyze_visual → ONLY if complex visual analysis needed
 ```
+
+**Pro tip:** Use `debug_screenshot` liberally - you can SEE the browser and adapt!
 
 ---
 
 ## ⚡ Best Practices
 
 ### DO ✅
-1. **Use `debug_test_flow` for authenticated flows** - Session persists!
-2. **Inspect before interacting** - Use `debug_inspect` to find selectors
-3. **Verify without screenshots** - Use `debug_verify` for most checks
-4. **Clear logs between tests** - Use `action: "clear"` to reset state
-5. **Use specific selectors** - `#id` or `[data-testid="..."]` are best
+1. **Use `debug_screenshot` to verify your actions** - SEE what the browser looks like!
+2. **Use `debug_test_flow` for authenticated flows** - Session persists!
+3. **Inspect before interacting** - Use `debug_inspect` to find selectors
+4. **Verify with screenshots when uncertain** - You can SEE and self-correct
+5. **Clear logs between tests** - Use `action: "clear"` to reset state
+6. **Use specific selectors** - `#id` or `[data-testid="..."]` are best
 
 ### DON'T ❌
-1. **Don't use `debug_analyze_visual` by default** - It's token intensive
-2. **Don't split authenticated flows** - Session will be lost!
-3. **Don't fetch full HTML** - Tools return summaries for efficiency
-4. **Don't ignore console errors** - They often reveal the problem
-5. **Don't forget to wait** - Pages need time to load
+1. **Don't assume actions worked** - Use `debug_screenshot` to verify!
+2. **Don't use `debug_analyze_visual` by default** - Try `debug_screenshot` first
+3. **Don't split authenticated flows** - Session will be lost!
+4. **Don't fetch full HTML** - Tools return summaries for efficiency
+5. **Don't ignore console errors** - They often reveal the problem
+6. **Don't forget to wait** - Pages need time to load
 
 ---
 
@@ -562,15 +609,16 @@ Args: {
 
 **Most Common Tools:**
 1. `debug_navigate` - Start here (go to URL, get summary)
-2. `debug_test_flow` - Use for authenticated flows
-3. `debug_verify` - Check if something worked
-4. `debug_console_errors` - Check for errors
-5. `debug_inspect` - Understand page structure
+2. `debug_screenshot` - SEE what the browser looks like (use liberally!)
+3. `debug_test_flow` - Use for authenticated flows
+4. `debug_verify` - Check if something worked
+5. `debug_console_errors` - Check for errors
+6. `debug_inspect` - Understand page structure
 
-**Rarely Needed:**
-6. `debug_interact` - Usually included in test_flow
-7. `debug_network_analyze` - For API debugging
-8. `debug_analyze_visual` - Last resort (token intensive)
+**Less Common:**
+7. `debug_interact` - Usually included in test_flow
+8. `debug_network_analyze` - For API debugging
+9. `debug_analyze_visual` - Last resort (Gemini Vision, very token intensive)
 
 ---
 
