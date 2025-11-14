@@ -382,6 +382,85 @@ app.get('/stats', requireApiKey, (req, res) => {
 });
 
 // ===========================================
+// VISUAL DEBUGGING ENDPOINTS
+// ===========================================
+
+/**
+ * Get session recordings info (trace/video/screenshots)
+ */
+app.get('/session/:sessionId/recordings', requireApiKey, (req, res) => {
+  const { sessionId } = req.params;
+  const recordings = sessionManager.getSessionRecordings(sessionId);
+
+  if (!recordings) {
+    return res.status(404).json({
+      success: false,
+      error: 'Session not found'
+    });
+  }
+
+  res.json({
+    success: true,
+    ...recordings,
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
+ * Get session screenshots
+ */
+app.get('/session/:sessionId/screenshots', requireApiKey, (req, res) => {
+  const { sessionId } = req.params;
+  const screenshots = sessionManager.getSessionScreenshots(sessionId);
+
+  res.json({
+    success: true,
+    sessionId,
+    count: screenshots.length,
+    screenshots: screenshots.map(s => ({
+      timestamp: s.timestamp,
+      action: s.action,
+      image: `data:image/png;base64,${s.base64}`
+    })),
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
+ * Download trace file for session
+ */
+app.get('/session/:sessionId/trace/download', requireApiKey, (req, res) => {
+  const { sessionId } = req.params;
+  const recordings = sessionManager.getSessionRecordings(sessionId);
+
+  if (!recordings || !recordings.tracePath) {
+    return res.status(404).json({
+      success: false,
+      error: 'Trace file not found. Make sure ENABLE_TRACE_RECORDING=true is set.'
+    });
+  }
+
+  res.download(recordings.tracePath, `${sessionId}-trace.zip`);
+});
+
+/**
+ * Download video file for session
+ */
+app.get('/session/:sessionId/video/download', requireApiKey, (req, res) => {
+  const { sessionId } = req.params;
+  const recordings = sessionManager.getSessionRecordings(sessionId);
+
+  if (!recordings || !recordings.videoPath) {
+    return res.status(404).json({
+      success: false,
+      error: 'Video file not found. Make sure ENABLE_VIDEO_RECORDING=true is set.'
+    });
+  }
+
+  res.download(recordings.videoPath, `${sessionId}-video.webm`);
+});
+
+// ===========================================
 // CLEANUP & SHUTDOWN
 // ===========================================
 

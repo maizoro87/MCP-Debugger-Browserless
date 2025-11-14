@@ -675,7 +675,63 @@ export async function executeDebugVerify(sessionId: string, args: any): Promise<
 }
 
 /**
- * Tool 6: debug_analyze_visual - Gemini Vision (use sparingly!)
+ * Tool 6: debug_screenshot - Get current page screenshot
+ *
+ * Returns screenshot directly to Claude for visual inspection
+ */
+export const debugScreenshotTool: Tool = {
+  name: 'debug_screenshot',
+  description: 'Capture screenshot of current page or specific element. Returns base64 PNG that Claude can see directly. Use this to verify visual state, check if elements are visible, or inspect layout.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      fullPage: {
+        type: 'boolean',
+        description: 'Capture full page (default: false, viewport only)'
+      },
+      selector: {
+        type: 'string',
+        description: 'Optional: Capture only this element instead of full page'
+      },
+      description: {
+        type: 'string',
+        description: 'Optional: What you want to check in the screenshot (helps with analysis)'
+      }
+    }
+  }
+};
+
+export async function executeDebugScreenshot(sessionId: string, args: any): Promise<string> {
+  const { fullPage = false, selector, description } = args;
+
+  const page = sessionManager.getSessionPage(sessionId);
+  if (!page) throw new Error('Session not initialized');
+
+  // Take screenshot
+  let screenshot: Buffer;
+  if (selector) {
+    const element = await page.$(selector);
+    if (!element) throw new Error(`Element not found: ${selector}`);
+    screenshot = await element.screenshot({ type: 'png' });
+  } else {
+    screenshot = await page.screenshot({ fullPage, type: 'png' });
+  }
+
+  // Return as base64 so Claude can see it
+  const response = {
+    success: true,
+    url: page.url(),
+    title: await page.title(),
+    screenshot: `data:image/png;base64,${screenshot.toString('base64')}`,
+    description: description || 'Current page screenshot',
+    note: 'Claude can see this screenshot directly and analyze what\'s happening visually'
+  };
+
+  return JSON.stringify(response, null, 2);
+}
+
+/**
+ * Tool 7: debug_analyze_visual - Gemini Vision (use sparingly!)
  *
  * Visual analysis only when needed
  * Token-optimized: Strategic use, not default behavior
@@ -901,6 +957,7 @@ export const allDebugTools: Tool[] = [
   debugInspectTool,
   debugTestFlowTool,
   debugVerifyTool,
+  debugScreenshotTool,
   debugAnalyzeVisualTool,
   debugConsoleErrorsTool,
   debugNetworkAnalyzeTool
@@ -914,32 +971,59 @@ export async function executeDebugTool(
   sessionId: string,
   args: any
 ): Promise<string> {
+  let result: string;
+
+  // Execute the tool
   switch (toolName) {
     case 'debug_navigate':
-      return executeDebugNavigate(sessionId, args);
+      result = await executeDebugNavigate(sessionId, args);
+      break;
 
     case 'debug_interact':
-      return executeDebugInteract(sessionId, args);
+      result = await executeDebugInteract(sessionId, args);
+      break;
 
     case 'debug_inspect':
-      return executeDebugInspect(sessionId, args);
+      result = await executeDebugInspect(sessionId, args);
+      break;
 
     case 'debug_test_flow':
-      return executeDebugTestFlow(sessionId, args);
+      result = await executeDebugTestFlow(sessionId, args);
+      break;
 
     case 'debug_verify':
-      return executeDebugVerify(sessionId, args);
+      result = await executeDebugVerify(sessionId, args);
+      break;
+
+    case 'debug_screenshot':
+      result = await executeDebugScreenshot(sessionId, args);
+      break;
 
     case 'debug_analyze_visual':
-      return executeDebugAnalyzeVisual(sessionId, args);
+      result = await executeDebugAnalyzeVisual(sessionId, args);
+      break;
 
     case 'debug_console_errors':
-      return executeDebugConsoleErrors(sessionId, args);
+      result = await executeDebugConsoleErrors(sessionId, args);
+      break;
 
     case 'debug_network_analyze':
-      return executeDebugNetworkAnalyze(sessionId, args);
+      result = await executeDebugNetworkAnalyze(sessionId, args);
+      break;
 
     default:
       throw new Error(`Unknown tool: ${toolName}`);
   }
+
+  // Auto-capture screenshot after tool execution if enabled
+  const autoScreenshot = process.env.AUTO_SCREENSHOT_AFTER_ACTION === 'true';
+  if (autoScreenshot) {
+    try {
+      await sessionManager.captureScreenshot(sessionId, `after_${toolName}`);
+    } catch (error: any) {
+      console.warn(`Failed to auto-capture screenshot for ${toolName}:`, error.message);
+    }
+  }
+
+  return result;
 }

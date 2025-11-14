@@ -23,6 +23,16 @@ export interface DebugSession {
     currentUrl?: string;
     userAgent?: string;
   };
+  // Visual debugging
+  recordVideo: boolean;
+  recordTrace: boolean;
+  videoPath?: string;
+  tracePath?: string;
+  screenshots: Array<{
+    timestamp: Date;
+    action: string;
+    base64: string;
+  }>;
 }
 
 export class SessionManager {
@@ -60,6 +70,12 @@ export class SessionManager {
     // Create new session
     console.log(`🆕 Creating new session: ${sessionId}`);
 
+    // Check visual debugging settings
+    const enableVideo = process.env.ENABLE_VIDEO_RECORDING === 'true';
+    const enableTrace = process.env.ENABLE_TRACE_RECORDING === 'true';
+    const videoDir = process.env.VIDEO_DIR || '/tmp/mcp-videos';
+    const traceDir = process.env.TRACE_DIR || '/tmp/mcp-traces';
+
     session = {
       id: sessionId,
       connectionId,
@@ -68,7 +84,10 @@ export class SessionManager {
       page: null,
       createdAt: new Date(),
       lastActivity: new Date(),
-      metadata: {}
+      metadata: {},
+      recordVideo: enableVideo,
+      recordTrace: enableTrace,
+      screenshots: []
     };
 
     // Initialize browser for this session
@@ -78,10 +97,32 @@ export class SessionManager {
         args: ['--no-sandbox', '--disable-setuid-sandbox']
       });
 
-      session.context = await session.browser.newContext({
+      // Configure context with optional video recording
+      const contextOptions: any = {
         viewport: { width: 1280, height: 720 },
         userAgent: 'MCP-Debugger/3.0 (Playwright)'
-      });
+      };
+
+      if (enableVideo) {
+        contextOptions.recordVideo = {
+          dir: videoDir,
+          size: { width: 1280, height: 720 }
+        };
+        console.log(`📹 Video recording enabled for session ${sessionId}`);
+      }
+
+      session.context = await session.browser.newContext(contextOptions);
+
+      // Start tracing if enabled
+      if (enableTrace) {
+        session.tracePath = `${traceDir}/${sessionId}-${Date.now()}.zip`;
+        await session.context.tracing.start({
+          screenshots: true,
+          snapshots: true,
+          sources: true
+        });
+        console.log(`🎬 Trace recording enabled for session ${sessionId}`);
+      }
 
       session.page = await session.context.newPage();
 
@@ -222,6 +263,21 @@ export class SessionManager {
     console.log(`🗑️  Destroying session: ${sessionId}`);
 
     try {
+      // Stop trace recording before closing
+      if (session.recordTrace && session.context && session.tracePath) {
+        console.log(`💾 Saving trace to: ${session.tracePath}`);
+        await session.context.tracing.stop({ path: session.tracePath });
+      }
+
+      // Save video path (video is auto-saved by Playwright)
+      if (session.recordVideo && session.page) {
+        const videoPath = await session.page.video()?.path();
+        if (videoPath) {
+          session.videoPath = videoPath;
+          console.log(`💾 Video saved to: ${videoPath}`);
+        }
+      }
+
       if (session.page) await session.page.close();
       if (session.context) await session.context.close();
       if (session.browser) await session.browser.close();
@@ -278,6 +334,61 @@ export class SessionManager {
   }
 
   /**
+   * Capture screenshot for session
+   */
+  async captureScreenshot(sessionId: string, action: string): Promise<string | null> {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.page) return null;
+
+    try {
+      const screenshot = await session.page.screenshot({ type: 'png', fullPage: false });
+      const base64 = screenshot.toString('base64');
+
+      // Store in session
+      session.screenshots.push({
+        timestamp: new Date(),
+        action,
+        base64
+      });
+
+      // Keep only last 20 screenshots per session to save memory
+      if (session.screenshots.length > 20) {
+        session.screenshots.shift();
+      }
+
+      return base64;
+    } catch (error: any) {
+      console.error(`Failed to capture screenshot for ${sessionId}:`, error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Get session screenshots
+   */
+  getSessionScreenshots(sessionId: string) {
+    const session = this.sessions.get(sessionId);
+    return session?.screenshots || [];
+  }
+
+  /**
+   * Get session recordings info
+   */
+  getSessionRecordings(sessionId: string) {
+    const session = this.sessions.get(sessionId);
+    if (!session) return null;
+
+    return {
+      sessionId,
+      videoEnabled: session.recordVideo,
+      traceEnabled: session.recordTrace,
+      videoPath: session.videoPath,
+      tracePath: session.tracePath,
+      screenshotCount: session.screenshots.length
+    };
+  }
+
+  /**
    * Get statistics
    */
   getStats() {
@@ -288,7 +399,11 @@ export class SessionManager {
       sessionTimeout: this.sessionTimeout,
       oldestSession: sessions.length > 0
         ? Math.floor((Date.now() - Math.min(...sessions.map(s => s.createdAt.getTime()))) / 1000)
-        : 0
+        : 0,
+      visualDebugging: {
+        videoRecording: process.env.ENABLE_VIDEO_RECORDING === 'true',
+        traceRecording: process.env.ENABLE_TRACE_RECORDING === 'true'
+      }
     };
   }
 
