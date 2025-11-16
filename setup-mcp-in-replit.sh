@@ -25,9 +25,9 @@ cat > .claude/mcp.json << 'EOF'
 }
 EOF
 
-# Step 3: Download testing guide
-echo "📚 Downloading testing guide..."
-curl -s -o .claude/TESTING_GUIDE.md https://raw.githubusercontent.com/maizoro87/MCP-Debugger-Browserless/claude/verify-browserless-deployment-01Hbc3rwgrGDpUs6ujFxtWJR/CLAUDE_CODE_TESTING_GUIDE.md
+# Step 3: Download universal testing guide
+echo "📚 Downloading universal testing guide..."
+curl -s -o .claude/TESTING_GUIDE.md https://raw.githubusercontent.com/maizoro87/MCP-Debugger-Browserless/claude/verify-browserless-deployment-01Hbc3rwgrGDpUs6ujFxtWJR/MCP_TESTING_GUIDE_UNIVERSAL.md
 
 # Step 4: Verify files
 echo ""
