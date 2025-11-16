@@ -625,6 +625,215 @@ async function testErrorHandling() {
 
 ---
 
+## 🔐 Session Management & Stateful Testing
+
+### Understanding Browser Sessions in MCP-Debugger
+
+**Important:** MCP-Debugger maintains browser sessions across tool calls. This means:
+- ✅ Cookies persist between actions (good for testing authenticated flows)
+- ✅ localStorage/sessionStorage persists (realistic user behavior)
+- ⚠️ Server-side session state also persists (can cause issues in tests)
+
+### Common Issue: Server-Side Session Caching
+
+**Problem:** Your app has server-side session state that persists even after database changes.
+
+**Example Scenario:**
+1. User logs in → Server creates session with `firstLogin: true`
+2. You update database to `firstLogin: false`
+3. User session still contains cached `firstLogin: true`
+4. Tests fail because session state is stale
+
+**Why This Happens:**
+- Session data is stored server-side (Redis, memory, database)
+- Session cookie only contains session ID
+- Server looks up session data by ID
+- Database changes don't update existing session cache
+
+### Pattern 6: Testing with Server-Side Sessions
+
+**Use Case:** Handle apps with server-side session caching
+
+```typescript
+async function testWithSessionReset() {
+  // Option 1: Clear cookies to force new session
+  await use_mcp_tool("mcp-debugger", "debug_cookies", {
+    action: "clear"
+  });
+
+  // Then login fresh
+  await use_mcp_tool("mcp-debugger", "debug_navigate", {
+    url: "https://your-app.replit.app/login"
+  });
+
+  // Login flow here...
+
+  // Option 2: Use logout endpoint to clear server session
+  await use_mcp_tool("mcp-debugger", "debug_navigate", {
+    url: "https://your-app.replit.app/logout"
+  });
+
+  // Wait for logout to complete
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  // Login again with fresh session
+  await use_mcp_tool("mcp-debugger", "debug_navigate", {
+    url: "https://your-app.replit.app/login"
+  });
+}
+```
+
+### Pattern 7: Testing "First Login" Flows
+
+**Use Case:** Test password change or setup flows that depend on `firstLogin` flag
+
+```typescript
+async function testFirstLoginFlow() {
+  // Step 1: Clear existing session
+  await use_mcp_tool("mcp-debugger", "debug_cookies", {
+    action: "clear"
+  });
+
+  // Step 2: Login (may have stale session state)
+  await use_mcp_tool("mcp-debugger", "debug_navigate", {
+    url: "https://your-app.replit.app/login"
+  });
+
+  await use_mcp_tool("mcp-debugger", "debug_type", {
+    selector: "#email",
+    text: "user@example.com"
+  });
+
+  await use_mcp_tool("mcp-debugger", "debug_type", {
+    selector: "#password",
+    text: "password123"
+  });
+
+  await use_mcp_tool("mcp-debugger", "debug_click", {
+    selector: "button[type='submit']"
+  });
+
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  // Step 3: Check console for server response
+  const console = await use_mcp_tool("mcp-debugger", "debug_console", {});
+  console.log("Login console logs:", console.messages);
+
+  // Step 4: If redirected to change-password, complete the flow
+  const state = await use_mcp_tool("mcp-debugger", "debug_dom_state", {});
+
+  if (state.url.includes("/change-password")) {
+    console.log("First login detected - handling password change");
+
+    // Fill new password
+    await use_mcp_tool("mcp-debugger", "debug_type", {
+      selector: "#newPassword",
+      text: "NewPassword123!"
+    });
+
+    await use_mcp_tool("mcp-debugger", "debug_type", {
+      selector: "#confirmPassword",
+      text: "NewPassword123!"
+    });
+
+    await use_mcp_tool("mcp-debugger", "debug_click", {
+      selector: "button[type='submit']"
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // This updates BOTH database AND server session
+    console.log("Password changed - session now updated");
+  }
+
+  // Step 5: Now proceed with actual test
+  const finalState = await use_mcp_tool("mcp-debugger", "debug_dom_state", {});
+  console.log("Final URL:", finalState.url);
+
+  return {
+    success: true,
+    finalUrl: finalState.url
+  };
+}
+```
+
+### Debugging Session Issues
+
+**Use console logs to diagnose:**
+
+```typescript
+// After login, check what the server returned
+const console = await use_mcp_tool("mcp-debugger", "debug_console", {});
+
+// Look for API responses in logs
+const loginResponse = console.messages.find(msg =>
+  msg.text?.includes("firstLogin") ||
+  msg.text?.includes("login response")
+);
+
+console.log("Server returned:", loginResponse);
+```
+
+**Check cookies:**
+
+```typescript
+// See what cookies are set
+const cookies = await use_mcp_tool("mcp-debugger", "debug_cookies", {
+  action: "get"
+});
+
+console.log("Current cookies:", cookies);
+```
+
+**Check network responses:**
+
+```typescript
+// See actual API responses
+const network = await use_mcp_tool("mcp-debugger", "debug_network", {
+  filter: "fetch"
+});
+
+// Find login API call
+const loginCall = network.requests.find(r => r.url.includes("/api/login"));
+console.log("Login API response:", loginCall?.response);
+```
+
+### Solutions for Stale Session State
+
+| Solution | When to Use | Pros | Cons |
+|----------|------------|------|------|
+| Clear cookies | Session in cookie | Fast, simple | Doesn't clear server-side state |
+| Logout endpoint | Server-side sessions | Clears both client & server | Requires logout to work correctly |
+| Password change flow | `firstLogin` issues | Updates session cache | Requires UI interaction |
+| Wait for expiration | Short session TTL | No code changes | Slow, not practical for tests |
+| Incognito mode | Manual testing only | Completely fresh | Not available in MCP |
+
+### Best Practice: Design for Testing
+
+**Server-side consideration:**
+
+If you control the backend, add a test-only endpoint to clear session cache:
+
+```typescript
+// Example endpoint (test environment only!)
+app.post('/api/test/clear-session', (req, res) => {
+  req.session.destroy();
+  res.json({ success: true });
+});
+```
+
+Then in tests:
+
+```typescript
+// Clear server session programmatically
+const network = await use_mcp_tool("mcp-debugger", "debug_network", {});
+// Could use debug_navigate to POST to clear endpoint
+```
+
+**Recommendation:** For production apps, use the actual UI flows (like password change) rather than test-only endpoints.
+
+---
+
 ## ✅ Testing Best Practices
 
 ### 1. Always Use Specific Selectors
