@@ -8,6 +8,19 @@ When working in Replit and you need to visually debug a web app, use the MCP-Deb
 
 ## How to Debug
 
+### 🚀 FASTEST: One command to debug everything
+```bash
+curl -s -X POST "https://mcp-debugger-online-production.up.railway.app/mcp" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $MCP_API_KEY" \
+  -d '{"method": "full_debug", "params": {"url": "https://your-app.repl.co"}}'
+```
+This returns: navigation status, JS errors, failed network requests, page structure, AI vision analysis, and a summary verdict. **Start here.**
+
+---
+
+### Individual commands (if you need to dig deeper):
+
 ### 1. Navigate to a page and check for errors
 ```bash
 curl -s -X POST "https://mcp-debugger-online-production.up.railway.app/mcp" \
@@ -79,6 +92,7 @@ curl -s -X POST "https://mcp-debugger-online-production.up.railway.app/mcp" \
 
 | Method | Purpose |
 |--------|---------|
+| `full_debug` | **ONE COMMAND** - navigation + errors + network + page + AI vision |
 | `navigate` | Go to URL, loads page |
 | `screenshot` | Take PNG screenshot |
 | `interact` | Click, type, select, hover, clear elements |

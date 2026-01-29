@@ -32,9 +32,46 @@ Then use `$DEV_URL` or `$PROD_URL` in commands instead of hardcoding.
 - User says "test production" or "test the live site" → Use PROD_URL
 - User doesn't specify → ASK which one they want
 
-## 🔥 AI Vision Analysis (RECOMMENDED)
+## 🚀 ONE COMMAND TO DEBUG EVERYTHING (USE THIS FIRST!)
 
-**Use this to actually SEE what's on the page:**
+**The `full_debug` method does EVERYTHING in one call:**
+- Navigates to URL
+- Checks for JavaScript errors
+- Checks for failed network requests
+- Gets page structure (forms, buttons, inputs)
+- Runs AI vision analysis
+- Returns a complete debug report
+
+```bash
+curl -s -X POST https://mcp-debugger-online-production.up.railway.app/mcp \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $MCP_API_KEY" \
+  -d '{"method": "full_debug", "params": {"url": "URL_HERE"}}'
+```
+
+**With custom vision prompt:**
+```bash
+curl -s -X POST https://mcp-debugger-online-production.up.railway.app/mcp \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $MCP_API_KEY" \
+  -d '{"method": "full_debug", "params": {"url": "URL_HERE", "vision_prompt": "Is the login form showing correctly?"}}'
+```
+
+**Response includes:**
+- `navigation`: Did the page load?
+- `console`: JavaScript errors (count + messages)
+- `network`: Failed HTTP requests
+- `page`: Element counts (forms, buttons, inputs, etc.)
+- `vision`: AI analysis of what's on screen
+- `summary`: Quick verdict - "PAGE LOOKS GOOD ✓" or "FOUND X ISSUE(S)"
+
+**START HERE.** Only use individual commands if you need to dig deeper.
+
+---
+
+## 🔥 AI Vision Analysis (for deeper visual inspection)
+
+**Use this for specific visual questions:**
 
 ```bash
 curl -s -X POST https://mcp-debugger-online-production.up.railway.app/mcp \

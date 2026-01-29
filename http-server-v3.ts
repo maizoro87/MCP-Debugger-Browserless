@@ -559,6 +559,121 @@ app.post('/mcp', requireApiKey, async (req, res) => {
         break;
       }
 
+      case 'full_debug': {
+        // ONE COMMAND TO DEBUG EVERYTHING
+        // Navigates, checks errors, inspects page, runs AI vision
+        const controller = await initBrowser();
+        const { url, vision_prompt } = params;
+
+        if (!url) {
+          res.status(400).json({ success: false, error: 'url required' });
+          break;
+        }
+
+        const debugReport: any = {
+          success: true,
+          url,
+          timestamp: new Date().toISOString()
+        };
+
+        // 1. Navigate
+        try {
+          await controller.navigate(url);
+          await controller.waitFor(2000); // Wait for page to settle
+          debugReport.navigation = {
+            success: true,
+            finalUrl: await controller.getPageUrl(),
+            title: await controller.getPageTitle()
+          };
+        } catch (navError: any) {
+          debugReport.navigation = { success: false, error: navError.message };
+          debugReport.success = false;
+        }
+
+        // 2. Console Errors
+        const consoleLogs = await controller.getConsoleMessages();
+        const consoleErrors = consoleLogs.filter((l: any) => l.type === 'error');
+        debugReport.console = {
+          errorCount: consoleErrors.length,
+          errors: consoleErrors.slice(0, 10).map((e: any) => e.text),
+          hasErrors: consoleErrors.length > 0
+        };
+        if (consoleErrors.length > 0) debugReport.success = false;
+
+        // 3. Network Errors
+        const networkLogs = await controller.getNetworkRequests();
+        const failedRequests = networkLogs.filter((r: any) => r.status && r.status >= 400);
+        debugReport.network = {
+          totalRequests: networkLogs.length,
+          failedCount: failedRequests.length,
+          failedRequests: failedRequests.slice(0, 10).map((r: any) => ({
+            url: r.url,
+            status: r.status,
+            method: r.method
+          })),
+          hasFailures: failedRequests.length > 0
+        };
+        if (failedRequests.length > 0) debugReport.success = false;
+
+        // 4. Page Structure
+        debugReport.page = await controller.evaluateWithReturn(`
+          (function() {
+            return {
+              forms: document.querySelectorAll('form').length,
+              buttons: document.querySelectorAll('button, input[type="submit"]').length,
+              inputs: document.querySelectorAll('input, textarea, select').length,
+              links: document.querySelectorAll('a[href]').length,
+              images: document.querySelectorAll('img').length,
+              hasContent: !!document.body?.textContent?.trim()
+            };
+          })()
+        `);
+
+        // 5. AI Vision Analysis (if Gemini key available)
+        const geminiKey = process.env.GEMINI_API_KEY;
+        if (geminiKey) {
+          try {
+            const prompt = vision_prompt || 'Analyze this page. Is it displaying correctly? Are there any visual bugs, layout issues, or problems? List any issues found.';
+            const result = await controller.analyzeScreenshot(
+              url,
+              prompt,
+              geminiKey,
+              { fullPage: false, type: 'png' }
+            );
+            debugReport.vision = {
+              available: true,
+              analysis: result.analysis,
+              prompt
+            };
+          } catch (visionError: any) {
+            debugReport.vision = {
+              available: true,
+              error: visionError.message
+            };
+          }
+        } else {
+          debugReport.vision = {
+            available: false,
+            note: 'Set GEMINI_API_KEY for AI vision analysis'
+          };
+        }
+
+        // 6. Summary
+        const issues: string[] = [];
+        if (consoleErrors.length > 0) issues.push(`${consoleErrors.length} console errors`);
+        if (failedRequests.length > 0) issues.push(`${failedRequests.length} failed network requests`);
+        if (!debugReport.navigation?.success) issues.push('navigation failed');
+
+        debugReport.summary = {
+          issueCount: issues.length,
+          issues,
+          verdict: issues.length === 0 ? 'PAGE LOOKS GOOD ✓' : `FOUND ${issues.length} ISSUE(S)`
+        };
+
+        res.json(debugReport);
+        break;
+      }
+
       default:
         res.status(400).json({
           success: false,
