@@ -7,6 +7,31 @@ Use this skill to test your web application's UI using a remote headless browser
 - **Server:** `https://mcp-debugger-online-production.up.railway.app`
 - **API Key:** `$MCP_API_KEY` (must be set in Replit Secrets)
 
+## Dev vs Production URLs
+
+**IMPORTANT:** Replit has two different URLs for your app:
+
+| Environment | URL Pattern | When to Use |
+|-------------|-------------|-------------|
+| **Development** | `https://PROJECT.USERNAME.repl.co` | Testing unpublished changes |
+| **Production** | `https://PROJECT.replit.app` | Testing deployed/live version |
+
+**Before testing, ask the user:**
+> "Should I test the **dev** version (unpublished changes) or the **production** version (deployed)?"
+
+**Setting up URL environment variables in Replit Secrets:**
+```
+DEV_URL=https://your-project.your-username.repl.co
+PROD_URL=https://your-project.replit.app
+```
+
+Then use `$DEV_URL` or `$PROD_URL` in commands instead of hardcoding.
+
+**Quick check - which URL to use:**
+- User says "test my changes" → Use DEV_URL
+- User says "test production" or "test the live site" → Use PROD_URL
+- User doesn't specify → ASK which one they want
+
 ## 🔥 AI Vision Analysis (RECOMMENDED)
 
 **Use this to actually SEE what's on the page:**
