@@ -81,12 +81,68 @@ curl -s -X POST "https://mcp-debugger-online-production.up.railway.app/mcp" \
 |--------|---------|
 | `navigate` | Go to URL, loads page |
 | `screenshot` | Take PNG screenshot |
+| `interact` | Click, type, select, hover, clear elements |
+| `inspect` | Get page structure (forms, buttons, links, inputs) |
+| `verify` | Check element visibility, text content, URL |
 | `get_console_messages` | Get console.log/error output |
 | `get_network_requests` | Get all HTTP requests/responses |
 | `clear_console_messages` | Clear console buffer |
 | `clear_network_requests` | Clear network buffer |
 | `multi_step_test` | Run automated test flow |
 | `analyze_screenshot` | AI analysis with Gemini |
+
+### NEW: interact - Click, type, hover on elements
+```bash
+curl -s -X POST "https://mcp-debugger-online-production.up.railway.app/mcp" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $MCP_API_KEY" \
+  -d '{
+    "method": "interact",
+    "params": {
+      "action": "click",
+      "selector": "#submit-button"
+    }
+  }'
+
+# Actions: click, type, select, hover, clear
+# For type: {"action": "type", "selector": "#email", "value": "test@example.com"}
+# For select: {"action": "select", "selector": "#country", "value": "USA"}
+```
+
+### NEW: inspect - Get page structure without screenshots
+```bash
+curl -s -X POST "https://mcp-debugger-online-production.up.railway.app/mcp" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $MCP_API_KEY" \
+  -d '{
+    "method": "inspect",
+    "params": {
+      "focus": "all"
+    }
+  }'
+
+# Focus options: all, forms, buttons, links, inputs
+# Returns selectors you can use with interact!
+```
+
+### NEW: verify - Check page state (no screenshots needed)
+```bash
+curl -s -X POST "https://mcp-debugger-online-production.up.railway.app/mcp" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $MCP_API_KEY" \
+  -d '{
+    "method": "verify",
+    "params": {
+      "checks": [
+        {"type": "element_visible", "selector": ".success-message"},
+        {"type": "url_contains", "value": "/dashboard"},
+        {"type": "no_console_errors"}
+      ]
+    }
+  }'
+
+# Check types: element_visible, element_exists, text_contains, url_contains, no_console_errors
+```
 
 ## Step Actions for multi_step_test
 

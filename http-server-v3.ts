@@ -317,6 +317,248 @@ app.post('/mcp', requireApiKey, async (req, res) => {
         break;
       }
 
+      // ===========================================
+      // NEW REST API METHODS (matching MCP tools)
+      // ===========================================
+
+      case 'interact': {
+        // Interact with page elements (click, type, select, hover, clear)
+        const controller = await initBrowser();
+        const { action, selector, value, waitAfter = 500 } = params;
+
+        if (!action || !selector) {
+          res.status(400).json({ success: false, error: 'action and selector required' });
+          break;
+        }
+
+        const beforeUrl = await controller.getPageUrl();
+        let resultMsg = '';
+
+        switch (action) {
+          case 'click':
+            await controller.click(selector);
+            resultMsg = `Clicked: ${selector}`;
+            break;
+          case 'type':
+            if (!value) {
+              res.status(400).json({ success: false, error: 'value required for type action' });
+              return;
+            }
+            await controller.fill(selector, value);
+            resultMsg = `Typed "${value}" into ${selector}`;
+            break;
+          case 'select':
+            if (!value) {
+              res.status(400).json({ success: false, error: 'value required for select action' });
+              return;
+            }
+            await controller.selectOption(selector, [value]);
+            resultMsg = `Selected "${value}" in ${selector}`;
+            break;
+          case 'hover':
+            await controller.hover(selector);
+            resultMsg = `Hovered: ${selector}`;
+            break;
+          case 'clear':
+            await controller.fill(selector, '');
+            resultMsg = `Cleared: ${selector}`;
+            break;
+          default:
+            res.status(400).json({ success: false, error: `Unknown action: ${action}` });
+            return;
+        }
+
+        await controller.waitFor(waitAfter);
+        const afterUrl = await controller.getPageUrl();
+
+        res.json({
+          success: true,
+          action,
+          selector,
+          value: value || null,
+          result: resultMsg,
+          urlChanged: beforeUrl !== afterUrl,
+          currentUrl: afterUrl,
+          currentTitle: await controller.getPageTitle(),
+          timestamp: new Date().toISOString()
+        });
+        break;
+      }
+
+      case 'inspect': {
+        // Get page structure (forms, buttons, links, inputs)
+        const controller = await initBrowser();
+        const { focus = 'all', selector } = params;
+
+        const inspection = await controller.evaluateWithReturn(`
+          (function() {
+            const root = ${selector ? `document.querySelector("${selector}")` : 'document.body'};
+            if (!root) return { error: 'Selector not found' };
+
+            const result = {};
+            const focus = "${focus}";
+
+            if (focus === 'all' || focus === 'forms') {
+              result.forms = Array.from(root.querySelectorAll('form')).map((form, i) => ({
+                index: i,
+                action: form.action || '(none)',
+                method: form.method || 'get',
+                fields: Array.from(form.querySelectorAll('input, select, textarea')).map(field => ({
+                  name: field.getAttribute('name') || '(unnamed)',
+                  type: field.getAttribute('type') || field.tagName.toLowerCase(),
+                  id: field.id || null,
+                  required: field.hasAttribute('required')
+                }))
+              }));
+            }
+
+            if (focus === 'all' || focus === 'buttons') {
+              result.buttons = Array.from(root.querySelectorAll('button, input[type="submit"], input[type="button"]'))
+                .slice(0, 30)
+                .map((btn, i) => ({
+                  index: i,
+                  text: btn.textContent?.trim() || btn.value || '(no text)',
+                  type: btn.getAttribute('type') || 'button',
+                  id: btn.id || null,
+                  selector: btn.id ? '#' + btn.id : (btn.className ? '.' + btn.className.split(' ')[0] : 'button:nth-child(' + (i+1) + ')')
+                }));
+            }
+
+            if (focus === 'all' || focus === 'links') {
+              result.links = Array.from(root.querySelectorAll('a[href]'))
+                .slice(0, 20)
+                .map((link, i) => ({
+                  index: i,
+                  text: link.textContent?.trim() || '(no text)',
+                  href: link.href
+                }));
+            }
+
+            if (focus === 'all' || focus === 'inputs') {
+              result.inputs = Array.from(root.querySelectorAll('input, textarea, select'))
+                .map((input, i) => ({
+                  index: i,
+                  type: input.getAttribute('type') || input.tagName.toLowerCase(),
+                  name: input.getAttribute('name') || '(unnamed)',
+                  id: input.id || null,
+                  placeholder: input.getAttribute('placeholder') || null,
+                  selector: input.id ? '#' + input.id : (input.name ? '[name="' + input.name + '"]' : null)
+                }));
+            }
+
+            return result;
+          })()
+        `);
+
+        const consoleLogs = await controller.getConsoleMessages();
+        const errors = consoleLogs.filter((log: any) => log.type === 'error').slice(-5);
+
+        res.json({
+          success: true,
+          inspection,
+          consoleErrors: errors.map((e: any) => e.text),
+          url: await controller.getPageUrl(),
+          title: await controller.getPageTitle(),
+          timestamp: new Date().toISOString()
+        });
+        break;
+      }
+
+      case 'verify': {
+        // Verify page state (element visibility, text content, URL)
+        const controller = await initBrowser();
+        const { checks } = params;
+
+        if (!checks || !Array.isArray(checks)) {
+          res.status(400).json({ success: false, error: 'checks array required' });
+          break;
+        }
+
+        const results: any[] = [];
+        let failedChecks = 0;
+
+        for (const check of checks) {
+          try {
+            let passed = false;
+            let details = '';
+
+            switch (check.type) {
+              case 'element_visible':
+                passed = await controller.isElementVisible(check.selector);
+                details = passed ? 'Element is visible' : 'Element NOT visible';
+                break;
+
+              case 'element_exists':
+                const exists = await controller.evaluateWithReturn(
+                  `!!document.querySelector("${check.selector}")`
+                );
+                passed = !!exists;
+                details = passed ? 'Element exists' : 'Element does NOT exist';
+                break;
+
+              case 'text_contains':
+                const text = await controller.evaluateWithReturn(
+                  `document.querySelector("${check.selector}")?.textContent || ''`
+                );
+                passed = String(text).includes(check.value);
+                details = passed
+                  ? `Text contains "${check.value}"`
+                  : `Text does NOT contain "${check.value}". Found: ${String(text).substring(0, 100)}`;
+                break;
+
+              case 'url_contains':
+                const url = await controller.getPageUrl();
+                passed = url.includes(check.value);
+                details = passed
+                  ? `URL contains "${check.value}"`
+                  : `URL does NOT contain "${check.value}". Current: ${url}`;
+                break;
+
+              case 'no_console_errors':
+                const logs = await controller.getConsoleMessages();
+                const errorCount = logs.filter((l: any) => l.type === 'error').length;
+                passed = errorCount === 0;
+                details = passed ? 'No console errors' : `Found ${errorCount} console errors`;
+                break;
+
+              default:
+                details = `Unknown check type: ${check.type}`;
+            }
+
+            results.push({
+              check: check.type,
+              selector: check.selector || null,
+              expected: check.value || null,
+              passed,
+              details
+            });
+
+            if (!passed) failedChecks++;
+
+          } catch (error: any) {
+            results.push({
+              check: check.type,
+              selector: check.selector || null,
+              passed: false,
+              error: error.message
+            });
+            failedChecks++;
+          }
+        }
+
+        res.json({
+          success: failedChecks === 0,
+          totalChecks: checks.length,
+          passedChecks: checks.length - failedChecks,
+          failedChecks,
+          checks: results,
+          url: await controller.getPageUrl(),
+          title: await controller.getPageTitle(),
+          timestamp: new Date().toISOString()
+        });
+        break;
+      }
+
       default:
         res.status(400).json({
           success: false,
