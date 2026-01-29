@@ -181,12 +181,34 @@ app.post('/mcp', requireApiKey, async (req, res) => {
     switch (method) {
       case 'navigate': {
         const controller = await initBrowser();
+        // Support custom headers (e.g., X-Test-Bypass for auth bypass)
+        if (params.headers) {
+          await controller.setExtraHeaders(params.headers);
+        }
         await controller.navigate(params.url);
         res.json({
           success: true,
           message: 'Navigation complete',
+          headersSet: params.headers ? Object.keys(params.headers) : [],
           timestamp: new Date().toISOString(),
           note: 'You are using the legacy REST API. Consider migrating to MCP SSE for better performance.'
+        });
+        break;
+      }
+
+      case 'set_headers': {
+        // Set headers that persist for all future requests in this session
+        const controller = await initBrowser();
+        if (!params.headers) {
+          res.status(400).json({ success: false, error: 'headers object required' });
+          break;
+        }
+        await controller.setExtraHeaders(params.headers);
+        res.json({
+          success: true,
+          message: 'Headers set for all future requests',
+          headers: Object.keys(params.headers),
+          timestamp: new Date().toISOString()
         });
         break;
       }
@@ -563,7 +585,7 @@ app.post('/mcp', requireApiKey, async (req, res) => {
         // ONE COMMAND TO DEBUG EVERYTHING
         // Navigates, checks errors, inspects page, runs AI vision
         const controller = await initBrowser();
-        const { url, vision_prompt } = params;
+        const { url, vision_prompt, headers, test_bypass_key } = params;
 
         if (!url) {
           res.status(400).json({ success: false, error: 'url required' });
@@ -575,6 +597,17 @@ app.post('/mcp', requireApiKey, async (req, res) => {
           url,
           timestamp: new Date().toISOString()
         };
+
+        // Set headers if provided (for auth bypass, etc.)
+        const headersToSet: Record<string, string> = headers || {};
+        if (test_bypass_key) {
+          headersToSet['X-Test-Bypass'] = test_bypass_key;
+          debugReport.authBypass = { method: 'header', key: 'X-Test-Bypass' };
+        }
+        if (Object.keys(headersToSet).length > 0) {
+          await controller.setExtraHeaders(headersToSet);
+          debugReport.headersSet = Object.keys(headersToSet);
+        }
 
         // 1. Navigate
         try {

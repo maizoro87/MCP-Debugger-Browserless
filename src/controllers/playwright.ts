@@ -115,11 +115,18 @@ class PlaywrightController {
     }
   }
 
-  async navigate(url: string): Promise<void> {
+  async navigate(url: string, options?: { headers?: Record<string, string> }): Promise<void> {
     try {
       if (!this.isInitialized()) {
         throw new Error('Browser not initialized');
       }
+
+      // Set custom headers if provided
+      if (options?.headers && this.state.page) {
+        await this.state.page.setExtraHTTPHeaders(options.headers);
+        this.log('Set custom headers:', Object.keys(options.headers));
+      }
+
       this.log('Navigating to', url);
       await this.state.page?.goto(url);
       this.log('Navigation complete');
@@ -127,6 +134,14 @@ class PlaywrightController {
       console.error('Navigation error:', error);
       throw new BrowserError('Failed to navigate', 'Check if the URL is valid and accessible');
     }
+  }
+
+  async setExtraHeaders(headers: Record<string, string>): Promise<void> {
+    if (!this.isInitialized() || !this.state.page) {
+      throw new Error('Browser not initialized');
+    }
+    await this.state.page.setExtraHTTPHeaders(headers);
+    this.log('Set extra headers:', Object.keys(headers));
   }
 
   async goBack(): Promise<void> {
