@@ -1,11 +1,32 @@
-# Browser UI Testing
+# Browser UI Testing (with AI Vision)
 
-Use this skill to test your web application's UI using a remote headless browser.
+Use this skill to test your web application's UI using a remote headless browser **with Gemini AI vision**.
 
 ## Configuration
 
 - **Server:** `https://mcp-debugger-online-production.up.railway.app`
 - **API Key:** `$MCP_API_KEY` (must be set in Replit Secrets)
+
+## 🔥 AI Vision Analysis (RECOMMENDED)
+
+**Use this to actually SEE what's on the page:**
+
+```bash
+curl -s -X POST https://mcp-debugger-online-production.up.railway.app/mcp \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $MCP_API_KEY" \
+  -d '{"method": "analyze_screenshot", "params": {"url": "URL_HERE", "prompt": "YOUR_QUESTION"}}'
+```
+
+**Example prompts:**
+- "What elements are visible? Any layout issues?"
+- "Is the login form displayed correctly?"
+- "Are there any visual bugs or broken elements?"
+- "Describe what you see and identify any problems"
+- "Is the button visible and properly styled?"
+- "Does the page look correct for a dashboard?"
+
+This uses Gemini AI to analyze screenshots and tell you what it sees - giving you **actual visual feedback** even though you can't see the browser!
 
 ## Instructions
 
@@ -86,11 +107,27 @@ curl -s -X POST https://mcp-debugger-online-production.up.railway.app/mcp \
 ## Workflow
 
 1. Ask user for the URL to test (or use the app's URL)
-2. Navigate and check for errors first
-3. Use inspect to find selectors
-4. Interact with elements as needed
-5. Verify the expected outcome
-6. Report results clearly
+2. **USE AI VISION FIRST** - `analyze_screenshot` to see what's on the page
+3. Check console errors if vision reports issues
+4. Use inspect to find selectors for interaction
+5. Interact with elements as needed
+6. Use AI vision again to verify the visual result
+7. Report results clearly
+
+## When to Use AI Vision vs Programmatic Checks
+
+**Use AI Vision (`analyze_screenshot`) when:**
+- You need to see what the page actually looks like
+- Checking layout, styling, visual bugs
+- Verifying complex UI (dashboards, forms, etc.)
+- User says "it doesn't look right" or "something's wrong"
+- Debugging visual issues
+
+**Use Programmatic Checks (`inspect`, `verify`) when:**
+- You know exactly what element to check
+- Checking if specific elements exist/are visible
+- Running automated test flows
+- Checking console/network for errors
 
 ## Example Test Flow
 
